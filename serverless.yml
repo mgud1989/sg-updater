@@ -1,0 +1,168 @@
+service: sg-updater
+
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  stage: dev
+  stackName: sg-updater
+  apiName: sgUpdater API
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  profile:  #local IAM profile for deploy
+  memorySize: 256
+  region: us-east-1
+  endpointType: REGIONAL
+
+  logs:
+    httpApi: true
+
+  httpApi:
+    cors: true
+    allowedOrigins:
+      - https://sg-updater.test.com
+    allowedMethods:
+      - POST
+
+  iam:
+    role:
+      name: sg-updater-lambdaRole
+      statements:
+        - Sid: IAM
+          Effect: Allow
+          Action:
+            - iam:ListAccessKeys
+          Resource: "*"
+        - Sid: EC2
+          Effect: Allow
+          Action:
+            - ec2:RevokeSecurityGroupIngress
+            - ec2:AuthorizeSecurityGroupEgress
+            - ec2:AuthorizeSecurityGroupIngress
+            - ec2:UpdateSecurityGroupRuleDescriptionsEgress
+            - ec2:DescribeSecurityGroupRules
+            - ec2:RevokeSecurityGroupEgress
+            - ec2:DescribeSecurityGroups
+            - ec2:UpdateSecurityGroupRuleDescriptionsIngress
+          Resource: "*"
+
+functions:
+  update:
+    name: sg-updater
+    handler: update.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /
+    environment:
+      TEST_HOME_OFFICE_NV: !Ref testHomeOfficeSGNVirginia
+      TEST_HOME_OFFICE_SP: sg-034c45b4e1603616b
+
+resources:
+
+  Description: "This stack create resources for Security Group update API through Serverless framework."
+
+  Resources:
+
+    certificate:
+      Type: AWS::CertificateManager::Certificate
+      Properties:
+        DomainName: api.sg-updater.test.com
+        ValidationMethod: DNS
+        DomainValidationOptions:
+            - DomainName: api.sg-updater.test.com
+              HostedZoneId: Z2KR8YPP10LSC5 # test.com
+        CertificateTransparencyLoggingPreference: ENABLED
+
+    customDomainName:
+      Type: AWS::ApiGateway::DomainName
+      Properties:
+        DomainName: api.sg-updater.test.com
+        RegionalCertificateArn: !Ref certificate
+        SecurityPolicy: TLS_1_2
+        EndpointConfiguration:
+                Types:
+                  - REGIONAL
+
+    apiMapping:
+      Type: 'AWS::ApiGatewayV2::ApiMapping'
+      Properties:
+        DomainName: !Ref customDomainName
+        ApiId: !Ref HttpApi
+        Stage: '$default'
+      DependsOn: HttpApi
+
+    sgUpdaterRecord:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: api.sg-updater.test.com
+        Type: A
+        HostedZoneId: Z2KR8YPP10LSC5 # test.com
+        AliasTarget:
+          DNSName: !GetAtt  customDomainName.RegionalDomainName
+          HostedZoneId: !GetAtt customDomainName.RegionalHostedZoneId
+          EvaluateTargetHealth: true
+
+    testHomeOfficeSGNVirginia:
+      Type: AWS::EC2::SecurityGroup
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+      Properties:
+        GroupDescription: Test Home Office
+        GroupName: Test Home Office
+        Tags:
+        -
+          Key: Name
+          Value: Test Home Office
+        VpcId: vpc-baa107dd #VPC N.Virginia / MASTER
+        SecurityGroupIngress:
+        -
+          CidrIp: 190.246.124.31/32
+          Description: Provider - Office
+          FromPort: 0
+          IpProtocol: tcp
+          ToPort: 65535
+        -
+          CidrIp: 186.0.1.251/32
+          Description: Buenos Aires  - Office
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+        -
+          CidrIp: 186.0.1.251/32
+          Description: Buenos Aires  - Office
+          FromPort: 3306
+          IpProtocol: tcp
+          ToPort: 3306
+        -
+          SourceSecurityGroupId: sg-000eb81e2475d2303
+          SourceSecurityGroupOwnerId: !Ref AWS::AccountId
+          Description: Bastion
+          FromPort: 0
+          IpProtocol: tcp
+          ToPort: 65535
+
+      # Users
+
+        -
+          CidrIp: 192.168.0.1/32
+          Description: name1.lastname1
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+        -
+          CidrIp: 192.168.0.2/32
+          Description: name2.lastname2
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+
+        SecurityGroupEgress:
+        -
+          CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+
+  Outputs:
+    testHomeOfficeSGNVirginia:
+      Description: Test Home Office NV Security Group ID
+      Value: !Ref testHomeOfficeSGNVirginia

@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: "Create Test Home Office of Sao Paulo region"
+
+Metadata:
+
+  Naming-conventions: TestHomeOfficeSecurityGroup
+
+Resources:
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test Home Office
+      GroupName: Test Home Office
+      Tags:
+      -
+        Key: Name
+        Value: Test Home Office
+      VpcId: vpc-0404b67e1f6f00a49
+
+      SecurityGroupIngress:
+      -
+        CidrIp: 180.1.0.1/32
+        Description: Buenos Aires Provider1 - Test Office
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      -
+        CidrIp: 190.0.1.31/32
+        Description: Buenos Aires Provider2 - Test Office
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      -
+        CidrIp: 180.1.0.1/32
+        Description: Buenos Aires Provider1 - Test Office
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      -
+        CidrIp: 190.0.1.31/32
+        Description: Buenos Aires Provider2 - Test Office
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      -
+        CidrIp: 180.1.0.1/32
+        Description: Buenos Aires Provider1 - Test Office
+        FromPort: 8983
+        IpProtocol: tcp
+        ToPort: 8983
+      -
+        CidrIp: 190.0.1.31/32
+        Description: Buenos Aires Provider2 - Test Office
+        FromPort: 8983
+        IpProtocol: tcp
+        ToPort: 8983
+      -
+        CidrIp: 180.1.0.1/32
+        Description: Buenos Aires Provider1 - Test Office
+        FromPort: 3306
+        IpProtocol: tcp
+        ToPort: 3306
+      -
+        CidrIp: 190.0.1.31/32
+        Description: Buenos Aires Provider2 - Test Office
+        FromPort: 3306
+        IpProtocol: tcp
+        ToPort: 3306
+      -
+        CidrIp: 192.168.0.1/32
+        Description: name1.lastname1
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      -
+        CidrIp: 192.168.0.2/32
+        Description: name2.lastname2
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      SecurityGroupEgress:
+      -
+        CidrIp: 0.0.0.0/0
+        IpProtocol: "-1"
